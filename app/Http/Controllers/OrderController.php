@@ -9,6 +9,8 @@ use App\Http\Requests\UpdateOrderRequest;
 use App\Models\Customer;
 use App\Models\Supplier;
 use App\Models\Product;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\App;
 
 class OrderController extends Controller
 {
@@ -17,7 +19,8 @@ class OrderController extends Controller
      */
     public function index()
     {
-        //
+        $orders = Order::with(['customer', 'product'])->latest('id')->paginate(10);
+        return view('index', compact('orders'));
     }
 
     /**
@@ -25,7 +28,7 @@ class OrderController extends Controller
      */
     public function create()
     {
-        //
+        return view('add');
     }
 
     /**
@@ -38,7 +41,7 @@ class OrderController extends Controller
             $quantity = [];
             $productIds = [];
             $customer = Customer::create($request->validated()['customer']);
-            $supplier =Supplier::create($request->validated()['supplier']);
+            $supplier = Supplier::create($request->validated()['supplier']);
 
             foreach ($request->validated()['products'] as $productData) {
                 $product = Product::create([
@@ -54,7 +57,7 @@ class OrderController extends Controller
             foreach ($request->validated()['order_details'] as $data) {
                 $quantity[] = $data['quantity'];
             }
-            $totalPrice = $price[0]*$quantity[0] + $price[1]*$quantity[1];
+            $totalPrice = $price[0] * $quantity[0] + $price[1] * $quantity[1];
             $order = Order::create([
                 'customer_id' => $customer->id,
                 'total_price' => $totalPrice,
@@ -88,7 +91,18 @@ class OrderController extends Controller
      */
     public function edit(Order $order)
     {
-        //
+        $order->load(['customer', 'product']);
+        $spl = 0;
+        $detail = [];
+        foreach ($order->product as $pr) {
+            $spl = $pr->supplier_id;
+            $detail[] = $pr->id;
+        }
+        $supplier = Supplier::find($spl);
+        $orderDetail = DB::table('order_details')
+            ->whereIn('product_id', $detail)
+            ->get();
+        return view('edit', compact('order', 'supplier', 'orderDetail'));
     }
 
     /**
@@ -96,7 +110,56 @@ class OrderController extends Controller
      */
     public function update(UpdateOrderRequest $request, Order $order)
     {
-        //
+        DB::transaction(function () use ($request, $order) {
+            $price = [];
+            $quantity = [];
+            $productIds = [];
+            // dd($order->id);
+            Customer::where('id', $order->customer_id)
+                ->update($request->validated()['customer']);
+
+            Supplier::where('id', $request->supplier['id'])
+                ->update($request->validated()['supplier']);
+
+            foreach ($request->validated()['products'] as $pro) {
+                // dd($pro['id']);
+                Product::where('id', $pro['id'])
+                    ->update([
+                        'product_name' => $pro['product_name'],
+                        'description' => $pro['description'],
+                        'price' => $pro['price'],
+                        'quantity' => $pro['quantity'],
+                        'supplier_id' => $request->supplier['id'],
+                    ]);
+                    $price[] = $pro['price'];
+                    $productIds[] = $pro['id'];
+            }
+
+            foreach ($request->validated()['order_details'] as $data) {
+                $quantity[] = $data['quantity'];
+            }
+            $totalPrice = $price[0] * $quantity[0] + $price[1] * $quantity[1];
+
+            Order::where('id', $order->id)
+                ->update([
+                    'customer_id' => $order->customer_id,
+                    'total_price' => $totalPrice,
+                ]);
+
+            foreach ($request->validated()['order_details'] as $key => $data) {
+                // dd($key);
+                $quantity[] = $data['quantity'];
+                DB::table('order_details')->where('product_id', $productIds[$key])->update([
+                    'order_id' => $order->id,
+                    'product_id' => $productIds[$key],
+                    'quantity' => $data['quantity'],
+                    'price' => $price[$key],
+                ]);
+            }
+        });
+
+        session()->flash('success', 'Cập nhật đơn hàng thành công');
+        return redirect()->route('edit', ['order' => $order->id]); // Chuyển hướng về trang edit của order
     }
 
     /**
@@ -104,6 +167,11 @@ class OrderController extends Controller
      */
     public function destroy(Order $order)
     {
-        //
+        DB::transaction(function () use ($order) {
+            $order->product()->sync([]);
+
+            $order->delete();
+        });
+        return back();
     }
 }
