@@ -11,6 +11,7 @@ use App\Models\Supplier;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Storage;
 
 class OrderController extends Controller
 {
@@ -40,13 +41,20 @@ class OrderController extends Controller
             $price = [];
             $quantity = [];
             $productIds = [];
-            $customer = Customer::create($request->validated()['customer']);
+            $totalPrice = 0;
+            $customer = Customer::create($request->customer);
             $supplier = Supplier::create($request->validated()['supplier']);
 
-            foreach ($request->validated()['products'] as $productData) {
+            foreach ($request->products as $key => $productData) {
+                // dd($request->file("products.$key.image"));
+                $imagePath = $request->file("products.$key.image")->store('images', 'public');
+                if (!Storage::exists('images')) {
+                    Storage::makeDirectory('images');
+                }
                 $product = Product::create([
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
+                    'image' => $imagePath,
                     'price' => $productData['price'],
                     'quantity' => $productData['quantity'],
                     'supplier_id' => $supplier->id,
@@ -54,16 +62,18 @@ class OrderController extends Controller
                 $price[] = $productData['price'];
                 $productIds[] = $product->id;
             }
-            foreach ($request->validated()['order_details'] as $data) {
+            foreach ($request->order_details as $key => $data) {
+                // dd($key);
                 $quantity[] = $data['quantity'];
+                $totalPrice += $price[$key] * $quantity[$key];
             }
-            $totalPrice = $price[0] * $quantity[0] + $price[1] * $quantity[1];
+
             $order = Order::create([
                 'customer_id' => $customer->id,
                 'total_price' => $totalPrice,
             ]);
 
-            foreach ($request->validated()['order_details'] as $key => $data) {
+            foreach ($request->order_details as $key => $data) {
                 $quantity[] = $data['quantity'];
                 DB::table('order_details')->insert([
                     'order_id' => $order->id,
@@ -114,19 +124,29 @@ class OrderController extends Controller
             $price = [];
             $quantity = [];
             $productIds = [];
+            $totalPrice = 0;
+            $imagePath = null;
             // dd($order->id);
             Customer::where('id', $order->customer_id)
-                ->update($request->validated()['customer']);
+                ->update($request->customer);
 
             Supplier::where('id', $request->supplier['id'])
-                ->update($request->validated()['supplier']);
+                ->update($request->supplier);
 
-            foreach ($request->validated()['products'] as $pro) {
-                // dd($pro['id']);
+            foreach ($request->products as $key => $pro) {
+                // dd($request->hasFile("products.$key.id.image"));
+                if(!$request->hasFile("products.$key.image")) {
+                    $imagePath = $pro['image_old'];
+                }
+                else{
+                    $imagePath = $request->file("products.$key.image")->store('images', 'public');
+                }
+
                 Product::where('id', $pro['id'])
                     ->update([
                         'product_name' => $pro['product_name'],
                         'description' => $pro['description'],
+                        'image' => $imagePath,
                         'price' => $pro['price'],
                         'quantity' => $pro['quantity'],
                         'supplier_id' => $request->supplier['id'],
@@ -135,18 +155,17 @@ class OrderController extends Controller
                     $productIds[] = $pro['id'];
             }
 
-            foreach ($request->validated()['order_details'] as $data) {
+            foreach ($request->order_details as $key => $data) {
                 $quantity[] = $data['quantity'];
+                $totalPrice += $price[$key] * $quantity[$key];
             }
-            $totalPrice = $price[0] * $quantity[0] + $price[1] * $quantity[1];
-
             Order::where('id', $order->id)
                 ->update([
                     'customer_id' => $order->customer_id,
                     'total_price' => $totalPrice,
                 ]);
 
-            foreach ($request->validated()['order_details'] as $key => $data) {
+            foreach ($request->order_details as $key => $data) {
                 // dd($key);
                 $quantity[] = $data['quantity'];
                 DB::table('order_details')->where('product_id', $productIds[$key])->update([

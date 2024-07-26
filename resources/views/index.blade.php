@@ -42,6 +42,7 @@
                                     <ul>
                                         <li>Giá: {{ number_format($product->pivot->price) }}</li>
                                         <li>Số lượng: {{ $product->pivot->quantity }}</li>
+                                        <li>Ảnh: <img src="{{ \Storage::url($product->image)}}" alt="" style="width:100px; height:100px"></li>
                                     </ul>
                                 @endforeach
                             </td>

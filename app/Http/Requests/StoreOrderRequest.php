@@ -38,6 +38,7 @@ class StoreOrderRequest extends FormRequest
             'products.*' => 'array|required_array_keys:product_name,description,price,quantity',
             'products.*.product_name' => 'required|unique:products,product_name',
             'products.*.description' => 'required',
+            'products.*.image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
             'products.*.price' => 'required|integer|min:0',
             'products.*.quantity' => 'required|integer|min:0',
 

@@ -39,6 +39,7 @@ class UpdateOrderRequest extends FormRequest
             'products.*.id' => 'required',
             'products.*.product_name' => 'required',
             'products.*.description' => 'required',
+            'products.*.image' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
             'products.*.price' => 'required|integer|min:0',
             'products.*.quantity' => 'required|integer|min:0',
 

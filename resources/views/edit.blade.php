@@ -11,7 +11,7 @@
         </div>
     @endif
         <a href="{{ route('list')}}" class="btn btn-info mt-4">Quay lại</a>
-    <form action="{{ route('update', $order) }}" method="post">
+    <form action="{{ route('update', $order) }}" method="post" enctype="multipart/form-data">
         @csrf
         @method('PUT')
         <div class="row mt-5">
@@ -95,6 +95,7 @@
                     <tr>
                         <th>Tên sản phẩm</th>
                         <th>Mô tả</th>
+                        <th>Ảnh</th>
                         <th>Giá</th>
                         <th>Số lượng</th>
                         <th>Số lượng bán</th>
@@ -118,6 +119,16 @@
                                     name="products[{{ $i }}][description]"
                                     value="{{ $order->product[$i]->description }}">
                                 @error("products.$i.description")
+                                    <div class="alert alert-danger">{{ $message }}</div>
+                                @enderror
+                            </td>
+                            <td>
+                                <input type="file" class="form-control" name="products[{{ $i }}][image]">
+                                @if ($order->product[$i]->image)
+                                    <input type="hidden" name="products[{{ $i }}][image_old]" value="{{ $order->product[$i]->image }}">
+                                    <img src="{{ \Storage::url($order->product[$i]->image)}}" alt="" style="width:100px; height:100px">
+                                @endif
+                                @error("products.$i.image")
                                     <div class="alert alert-danger">{{ $message }}</div>
                                 @enderror
                             </td>

@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignIdFor(Supplier::class)->constrained();
             $table->string('product_name')->unique();
             $table->string('description');
+            $table->string('image');
             $table->unsignedBigInteger('price');
             $table->unsignedBigInteger('quantity');
             $table->timestamps();

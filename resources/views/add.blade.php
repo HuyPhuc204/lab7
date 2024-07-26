@@ -11,7 +11,7 @@
         </div>
     @endif
     <a href="{{ route('list')}}" class="btn btn-info mt-4">Quay lại</a>
-    <form action="{{ route('add') }}" method="post">
+    <form action="{{ route('add') }}" method="post" enctype="multipart/form-data">
         @csrf
         <div class="row mt-5">
             <div class="col-md-6">
@@ -92,6 +92,7 @@
                     <tr>
                         <th>Tên sản phẩm</th>
                         <th>Mô tả</th>
+                        <th>Ảnh</th>
                         <th>Giá</th>
                         <th>Số lượng</th>
                         <th>Số lượng bán</th>
@@ -112,6 +113,12 @@
                                     name="products[{{ $i }}][description]"
                                     value="{{ old("products.$i.description") }}">
                                 @error("products.$i.description")
+                                    <div class="alert alert-danger">{{ $message }}</div>
+                                @enderror
+                            </td>
+                            <td>
+                                <input type="file" class="form-control" name="products[{{ $i }}][image]">
+                                @error("products.$i.image")
                                     <div class="alert alert-danger">{{ $message }}</div>
                                 @enderror
                             </td>
